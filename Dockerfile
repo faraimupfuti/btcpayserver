@@ -1,6 +1,9 @@
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.302-noble AS builder
+
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+
 WORKDIR /source
+
 COPY nuget.config nuget.config
 COPY Build/Common.csproj Build/Common.csproj
 COPY BTCPayServer.Abstractions/BTCPayServer.Abstractions.csproj BTCPayServer.Abstractions/BTCPayServer.Abstractions.csproj
@@ -9,7 +12,9 @@ COPY BTCPayServer.Common/BTCPayServer.Common.csproj BTCPayServer.Common/BTCPaySe
 COPY BTCPayServer.Rating/BTCPayServer.Rating.csproj BTCPayServer.Rating/BTCPayServer.Rating.csproj
 COPY BTCPayServer.Data/BTCPayServer.Data.csproj BTCPayServer.Data/BTCPayServer.Data.csproj
 COPY BTCPayServer.Client/BTCPayServer.Client.csproj BTCPayServer.Client/BTCPayServer.Client.csproj
+
 RUN cd BTCPayServer && dotnet restore
+
 COPY BTCPayServer.Common/. BTCPayServer.Common/.
 COPY BTCPayServer.Rating/. BTCPayServer.Rating/.
 COPY BTCPayServer.Data/. BTCPayServer.Data/.
@@ -17,32 +22,44 @@ COPY BTCPayServer.Client/. BTCPayServer.Client/.
 COPY BTCPayServer.Abstractions/. BTCPayServer.Abstractions/.
 COPY BTCPayServer/. BTCPayServer/.
 COPY Build/Version.csproj Build/Version.csproj
+
 ARG CONFIGURATION_NAME=Release
 ARG GIT_COMMIT
-RUN cd BTCPayServer && dotnet publish -p:GitCommit=${GIT_COMMIT} --output /app/ --configuration ${CONFIGURATION_NAME}
+
+RUN cd BTCPayServer && \
+    dotnet publish \
+    -p:GitCommit=${GIT_COMMIT} \
+    --output /app/ \
+    --configuration ${CONFIGURATION_NAME}
+
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.10-noble
 
-RUN apt-get update && apt-get install -y --no-install-recommends iproute2 openssh-client ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV LC_ALL en_US.UTF-8
-ENV LANG en_US.UTF-8
-
+# Install required packages and generate the en_US.UTF-8 locale
 RUN apt-get update && \
-    apt-get install -y locales && \
-    locale-gen en_US.UTF-8
+    apt-get install -y --no-install-recommends \
+        iproute2 \
+        openssh-client \
+        ca-certificates \
+        locales && \
+    sed -i '/^# *en_US.UTF-8 UTF-8/s/^# *//' /etc/locale.gen && \
+    locale-gen en_US.UTF-8 && \
+    rm -rf /var/lib/apt/lists/*
 
+# Configure locale AFTER it has been generated
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
 WORKDIR /datadir
 WORKDIR /app
+
 ENV BTCPAY_DATADIR=/datadir
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+
 VOLUME /datadir
 
-COPY --from=builder "/app" .
+COPY --from=builder /app .
 COPY docker-entrypoint.sh docker-entrypoint.sh
+
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
