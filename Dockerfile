@@ -33,20 +33,23 @@ RUN cd BTCPayServer && \
     --configuration ${CONFIGURATION_NAME}
 
 
+# =========================
+# Runtime
+# =========================
+
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.10-noble
 
-# Install required packages and generate the en_US.UTF-8 locale
+# Install runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         iproute2 \
         openssh-client \
         ca-certificates \
         locales && \
-    sed -i '/^# *en_US.UTF-8 UTF-8/s/^# *//' /etc/locale.gen && \
     locale-gen en_US.UTF-8 && \
     rm -rf /var/lib/apt/lists/*
 
-# Configure locale AFTER it has been generated
+# Locale configuration
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
@@ -60,6 +63,8 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 VOLUME /datadir
 
 COPY --from=builder /app .
-COPY docker-entrypoint.sh docker-entrypoint.sh
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+
+RUN chmod +x /app/docker-entrypoint.sh
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
