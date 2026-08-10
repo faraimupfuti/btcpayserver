@@ -8,10 +8,10 @@ COPY nuget.config nuget.config
 COPY Build/Common.csproj Build/Common.csproj
 COPY BTCPayServer.Abstractions/BTCPayServer.Abstractions.csproj BTCPayServer.Abstractions/BTCPayServer.Abstractions.csproj
 COPY BTCPayServer/BTCPayServer.csproj BTCPayServer/BTCPayServer.csproj
-COPY BTCPayServer.Common/BTCPayServer.Common.csproj BTCPayServer.Common/BTCPayServer.Common.csproj
-COPY BTCPayServer.Rating/BTCPayServer.Rating.csproj BTCPayServer.Rating/BTCPayServer.Rating.csproj
-COPY BTCPayServer.Data/BTCPayServer.Data.csproj BTCPayServer.Data/BTCPayServer.Data.csproj
-COPY BTCPayServer.Client/BTCPayServer.Client.csproj BTCPayServer.Client/BTCPayServer.Client.csproj
+COPY BTCPayServer.Common/BTCPayServer.Common.csproj BTCPayServer.Common.csproj
+COPY BTCPayServer.Rating/BTCPayServer.Rating.csproj BTCPayServer.Rating.csproj
+COPY BTCPayServer.Data/BTCPayServer.Data.csproj BTCPayServer.Data.csproj
+COPY BTCPayServer.Client/BTCPayServer.Client.csproj BTCPayServer.Client.csproj
 
 RUN cd BTCPayServer && dotnet restore
 
@@ -33,13 +33,8 @@ RUN cd BTCPayServer && \
     --configuration ${CONFIGURATION_NAME}
 
 
-# =========================
-# Runtime
-# =========================
-
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.10-noble
 
-# Install runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         iproute2 \
@@ -49,16 +44,16 @@ RUN apt-get update && \
     locale-gen en_US.UTF-8 && \
     rm -rf /var/lib/apt/lists/*
 
-# Locale configuration
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-WORKDIR /datadir
-WORKDIR /app
-
+ENV ASPNETCORE_URLS=http://+:49392
 ENV BTCPAY_DATADIR=/datadir
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+WORKDIR /datadir
+WORKDIR /app
 
 VOLUME /datadir
 
@@ -66,5 +61,7 @@ COPY --from=builder /app .
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
 RUN chmod +x /app/docker-entrypoint.sh
+
+EXPOSE 49392
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
